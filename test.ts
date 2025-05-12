@@ -110,7 +110,6 @@ const toAst = (input: string, tree: Tree, breakpoints: number[]): MarkdownNode =
     type: "Document",
     from: 0,
     to: input.length,
-    value: input,
     children: [],
   }
 
@@ -121,8 +120,6 @@ const toAst = (input: string, tree: Tree, breakpoints: number[]): MarkdownNode =
   }
 
   const skippable = ["HeaderMark", "EmphasisMark"];
-
-  console.log(parser.breakpoints);
 
   const cursor = tree.cursor();
   let depth = 0;
@@ -136,7 +133,7 @@ const toAst = (input: string, tree: Tree, breakpoints: number[]): MarkdownNode =
       type: cursor.type.name,
       from: cursor.from,
       to: cursor.to,
-      value: cursor.type.name === "Text" ? input.slice(cursor.from, cursor.to) : undefined,
+      // value: cursor.type.name === "Text" ? input.slice(cursor.from, cursor.to) : undefined,
       children: [],
     }
     if (!skippable.includes(cursor.type.name)) {
@@ -182,4 +179,5 @@ const createParser = (initial: string) => {
   }
 }
 
-const p = createParser("# cool ***all* fd**");
+const p = createParser("# cool **te");
+p.append("st");

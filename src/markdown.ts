@@ -1742,7 +1742,7 @@ export class InlineContext {
 
         // Extract all elements after this.parts[i] and put them in element.children
         let children = [];
-        let lastOffset = part.from;
+        let lastOffset = part.from + 1;
         for (let j = i; j < this.parts.length; j++) {
           let part = this.parts[j];
           if (part instanceof Element) {
