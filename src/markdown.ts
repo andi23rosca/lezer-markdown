@@ -1756,8 +1756,8 @@ export class InlineContext {
             }
           }
         }
-        if (lastOffset < this.text.length) {
-          children.push(...this.getTextForRange(lastOffset, this.text.length))
+        if (lastOffset < this.text.length + this.offset) {
+          children.push(...this.getTextForRange(lastOffset, this.text.length + this.offset))
         }
         if (children.length) {
           element = this.elt(type, part.from, this.text.length, children);
@@ -1777,11 +1777,11 @@ export class InlineContext {
           result.push(...this.getTextForRange(lastOffset, part.from))
         }
         result.push(part)
-        lastOffset = part.to;
+        lastOffset = part.to + this.offset;
       }
     }
     if (lastOffset < this.text.length + this.offset) {
-      // console.log(this.text, lastOffset, this.text.length,)
+      // console.log(this.text, lastOffset, this.text.length, this.offset)
       // console.log('zzz', this.getTextForRange(lastOffset, this.text.length), this.text.slice(lastOffset, this.text.length))
       result.push(...this.getTextForRange(lastOffset, this.text.length + this.offset))
     }

@@ -120,6 +120,48 @@ const toAst = (input: string, tree: Tree, breakpoints: number[]): MarkdownNode =
     currentBlock().children?.push(child);
   }
 
+  const skippable = ["HeaderMark", "EmphasisMark"];
+
+  console.log(parser.breakpoints);
+
+  const cursor = tree.cursor();
+  let depth = 0;
+  outer: while (true) {
+    if (cursor.type.name === "Document" && cursor.firstChild()) {
+      depth++;
+      continue;
+    }
+
+    const node: MarkdownNode = {
+      type: cursor.type.name,
+      from: cursor.from,
+      to: cursor.to,
+      value: cursor.type.name === "Text" ? input.slice(cursor.from, cursor.to) : undefined,
+      children: [],
+    }
+    if (!skippable.includes(cursor.type.name)) {
+      pushChild(node);
+    }
+    blocks.push(node);
+
+    if (cursor.firstChild()) {
+      depth++;
+      continue;
+    }
+
+    inner: while (true) {
+      if (!depth)
+        break outer;
+      if (cursor.nextSibling()) {
+        blocks.pop();
+        break inner;
+      }
+      cursor.parent();
+      blocks.pop();
+      depth--;
+    }
+  }
+
   return doc;
 };
 
@@ -139,5 +181,5 @@ const createParser = (initial: string) => {
   }
 }
 
-const p = createParser("# cool");
-p.append(" test");
+const p = createParser("# cool*te");
+p.append("sdfst");
