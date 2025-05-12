@@ -170,6 +170,7 @@ const createParser = (initial: string) => {
   let doc = initial;
   let tree = parser.parse(doc);
   let fragments = TreeFragment.addTree(tree);
+  console.log(JSON.stringify(toAst(doc, tree, parser.breakpoints), null, 2));
   return {
     append: (text: string) => {
       doc += text;
@@ -181,5 +182,4 @@ const createParser = (initial: string) => {
   }
 }
 
-const p = createParser("# cool*te");
-p.append("sdfst");
+const p = createParser("# cool ***all* fd**");

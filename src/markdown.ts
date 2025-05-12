@@ -1711,8 +1711,10 @@ export class InlineContext {
         this.parts[k] = null
       }
 
-      if (open.to < close.from) {
-        content.push(...this.getTextForRange(open.to, close.from))
+      const lastOffset = content.at(-1)?.to || open.to;
+
+      if (lastOffset < close.from) {
+        content.push(...this.getTextForRange(lastOffset, close.from))
       }
 
       if (close.type.mark) content.push(this.elt(close.type.mark, close.from, end))
@@ -1756,11 +1758,11 @@ export class InlineContext {
             }
           }
         }
-        if (lastOffset < this.text.length + this.offset) {
-          children.push(...this.getTextForRange(lastOffset, this.text.length + this.offset))
+        if (lastOffset + 1 < this.end) {
+          children.push(...this.getTextForRange(lastOffset + 1, this.end))
         }
         if (children.length) {
-          element = this.elt(type, part.from, this.text.length, children);
+          element = this.elt(type, part.from, this.end, children);
         }
 
         this.parts[i] = element;
@@ -1769,7 +1771,7 @@ export class InlineContext {
 
     // Collect the elements remaining in this.parts into an array.
     let result = []
-    let lastOffset = this.offset;
+    let lastOffset = from + this.offset;
     for (let i = from; i < this.parts.length; i++) {
       let part = this.parts[i]
       if (part instanceof Element) {
@@ -1777,16 +1779,13 @@ export class InlineContext {
           result.push(...this.getTextForRange(lastOffset, part.from))
         }
         result.push(part)
-        lastOffset = part.to + this.offset;
+        lastOffset = part.to;
       }
     }
-    if (lastOffset < this.text.length + this.offset) {
-      // console.log(this.text, lastOffset, this.text.length, this.offset)
-      // console.log('zzz', this.getTextForRange(lastOffset, this.text.length), this.text.slice(lastOffset, this.text.length))
-      result.push(...this.getTextForRange(lastOffset, this.text.length + this.offset))
+    if (lastOffset < this.end) {
+      result.push(...this.getTextForRange(lastOffset, this.end))
     }
 
-    // console.log(JSON.stringify(result, null, 2));
     return result
   }
 
