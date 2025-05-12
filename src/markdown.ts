@@ -1114,6 +1114,9 @@ export class MarkdownParser extends Parser {
   /// @internal
   nodeTypes: { [name: string]: number } = Object.create(null)
 
+  // Used to keep track of the incremental breakpoints
+  breakpoints: number[] = [];
+
   /// @internal
   constructor(
     /// The parser's syntax [node
@@ -1138,6 +1141,15 @@ export class MarkdownParser extends Parser {
   ) {
     super()
     for (let t of nodeSet.types) this.nodeTypes[t.name] = t.id
+  }
+
+  parse(input: Input | string, fragments?: readonly TreeFragment[], ranges?: readonly {
+    from: number;
+    to: number;
+  }[]): Tree {
+    const res = super.parse(input, fragments, ranges)
+    this.breakpoints.push(input.length);
+    return res;
   }
 
   createParse(input: Input, fragments: readonly TreeFragment[], ranges: readonly { from: number, to: number }[]): PartialParse {
@@ -1773,7 +1785,7 @@ export class InlineContext {
       if (part instanceof Element) result.push(part)
     }
 
-    console.log(JSON.stringify(result, null, 2));
+    // console.log(JSON.stringify(result, null, 2));
     return result
   }
 

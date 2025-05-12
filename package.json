@@ -17,9 +17,11 @@
     "@marijn/buildtool": "^0.1.6",
     "builddocs": "^1.0.0",
     "getdocs-ts": "^0.1.0",
+    "hast": "^1.0.0",
     "ist": "^1.1.1",
     "mocha": "^10.2.0",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "vite": "^6.3.5"
   },
   "dependencies": {
     "@lezer/common": "^1.0.0",
@@ -34,6 +36,6 @@
     "prepare": "node build.js",
     "test": "mocha",
     "build-readme": "node bin/build-readme.cjs",
-    "dev": "node build.js && ts-node test.ts"
+    "dev": "vite"
   }
 }
