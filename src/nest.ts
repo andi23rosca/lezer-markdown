@@ -1,11 +1,12 @@
-import {SyntaxNode, Parser, Input, parseMixed, SyntaxNodeRef} from "@lezer/common"
-import {Type, MarkdownExtension} from "./markdown"
+import { SyntaxNode, Parser, Input, parseMixed, SyntaxNodeRef } from "@lezer/common"
+import { MarkdownExtension } from "./markdown"
+import { Type } from "./Type"
 
 function leftOverSpace(node: SyntaxNode, from: number, to: number) {
   let ranges = []
-  for (let n = node.firstChild, pos = from;; n = n.nextSibling) {
+  for (let n = node.firstChild, pos = from; ; n = n.nextSibling) {
     let nextPos = n ? n.from : to
-    if (nextPos > pos) ranges.push({from: pos, to: nextPos})
+    if (nextPos > pos) ranges.push({ from: pos, to: nextPos })
     if (!n) break
     pos = n.to
   }
@@ -25,7 +26,7 @@ export function parseCode(config: {
   /// The parser used to parse HTML tags (both block and inline).
   htmlParser?: Parser,
 }): MarkdownExtension {
-  let {codeParser, htmlParser} = config
+  let { codeParser, htmlParser } = config
   let wrap = parseMixed((node: SyntaxNodeRef, input: Input) => {
     let id = node.type.id
     if (codeParser && (id == Type.CodeBlock || id == Type.FencedCode)) {
@@ -36,11 +37,11 @@ export function parseCode(config: {
       }
       let parser = codeParser(info)
       if (parser)
-        return {parser, overlay: node => node.type.id == Type.CodeText}
+        return { parser, overlay: node => node.type.id == Type.CodeText }
     } else if (htmlParser && (id == Type.HTMLBlock || id == Type.HTMLTag || id == Type.CommentBlock)) {
-      return {parser: htmlParser, overlay: leftOverSpace(node.node, node.from, node.to)}
+      return { parser: htmlParser, overlay: leftOverSpace(node.node, node.from, node.to) }
     }
     return null
   })
-  return {wrap}
+  return { wrap }
 }

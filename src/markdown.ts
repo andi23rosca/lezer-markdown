@@ -3,6 +3,7 @@ import {
   Input, Parser, PartialParse, SyntaxNode, ParseWrapper
 } from "@lezer/common"
 import { styleTags, tags as t, Tag } from "@lezer/highlight"
+import { Type } from "./Type"
 
 class CompositeBlock {
   static create(type: number, value: number, from: number, parentHash: number, end: number) {
@@ -38,58 +39,6 @@ class CompositeBlock {
       makeTree: (children, positions, length) => new Tree(NodeType.none, children, positions, length, this.hashProp)
     })
   }
-}
-
-export enum Type {
-  Document = 1,
-
-  CodeBlock,
-  FencedCode,
-  Blockquote,
-  HorizontalRule,
-  BulletList,
-  OrderedList,
-  ListItem,
-  ATXHeading1,
-  ATXHeading2,
-  ATXHeading3,
-  ATXHeading4,
-  ATXHeading5,
-  ATXHeading6,
-  SetextHeading1,
-  SetextHeading2,
-  HTMLBlock,
-  LinkReference,
-  Paragraph,
-  CommentBlock,
-  ProcessingInstructionBlock,
-
-  // Inline
-  Escape,
-  Entity,
-  HardBreak,
-  Emphasis,
-  StrongEmphasis,
-  Link,
-  Image,
-  InlineCode,
-  HTMLTag,
-  Comment,
-  ProcessingInstruction,
-  Autolink,
-
-  // Smaller tokens
-  HeaderMark,
-  QuoteMark,
-  ListMark,
-  LinkMark,
-  EmphasisMark,
-  CodeMark,
-  CodeText,
-  CodeInfo,
-  LinkTitle,
-  LinkLabel,
-  URL
 }
 
 /// Data structure used to accumulate a block's content during [leaf
@@ -483,6 +432,8 @@ const DefaultBlockParsers: { [name: string]: ((cx: BlockContext, line: Line) => 
     let endOfSpace = skipSpaceBack(line.text, line.text.length, off), after = endOfSpace
     while (after > off && line.text.charCodeAt(after - 1) == line.next) after--
     if (after == endOfSpace || after == off || !space(line.text.charCodeAt(after - 1))) after = line.text.length
+
+    console.log("atx", { ...cx.line });
     let buf = cx.buffer
       .write(Type.HeaderMark, 0, size)
       .writeElements(cx.parser.parseInline(line.text.slice(off + size + 1, after), from + size + 1), -from)
@@ -1254,6 +1205,7 @@ export class MarkdownParser extends Parser {
   /// returning an array of [`Element`](#Element) objects representing
   /// the inline content.
   parseInline(text: string, offset: number) {
+    // console.log(this)
     let cx = new InlineContext(this, text, offset)
     outer: for (let pos = offset; pos < cx.end;) {
       let next = cx.char(pos)
@@ -1518,6 +1470,7 @@ const DefaultInline: { [name: string]: (cx: InlineContext, next: number, pos: nu
   },
 
   LinkEnd(cx, next, start) {
+    // TODO: takeContent should have the context passed
     if (next != 93 /* ']' */) return -1
     // Scanning back to the next link/image start marker
     for (let i = cx.parts.length - 1; i >= 0; i--) {
@@ -1736,6 +1689,11 @@ export class InlineContext {
         if (this.parts[k] instanceof Element) content.push(this.parts[k] as Element)
         this.parts[k] = null
       }
+
+      if (open.to < close.from) {
+        content.push(this.elt("Text", open.to, close.from))
+      }
+
       if (close.type.mark) content.push(this.elt(close.type.mark, close.from, end))
       let element = this.elt(type, start, end, content)
       // If there are leftover emphasis marker characters, shrink the close/open markers. Otherwise, clear them.
@@ -1746,32 +1704,43 @@ export class InlineContext {
       else this.parts[i] = element
     }
 
+    // console.log(this);
+    // debugger;
     for (let i = this.parts.length - 1; i >= from; i--) {
       let part = this.parts[i]
-
       if (part instanceof InlineDelimiter) {
-        let type = part.type.resolve || "Emphasis"
+        let type = part.type.resolve
+        if (!type) continue;
         let size = Math.min(2, part.to - part.from)
         if (type === "Emphasis") {
-          type = size == 1 ? "Emphasis" : "StrongEmphasis"
+          type = size == 1 ? "EmphasisPartial" : "StrongEmphasisPartial"
         }
         let element = this.elt(type, part.from, this.text.length)
+        console.log(element)
 
         // Extract all elements after this.parts[i] and put them in element.children
         let children = [];
+        let lastOffset = part.from;
         for (let j = i; j < this.parts.length; j++) {
           let part = this.parts[j];
           if (part instanceof Element) {
+            if (part.from > lastOffset) {
+              children.push(this.elt("Text", lastOffset, part.from))
+            }
             children.push(part);
             this.parts[j] = null;
+            lastOffset = part.to;
           } else if (part instanceof InlineDelimiter) {
             if (part.type.mark) {
               children.push(this.elt(part.type.mark, part.from, part.to))
             }
           }
         }
+        if (lastOffset < this.text.length) {
+          children.push(this.elt("Text", lastOffset, this.text.length))
+        }
         if (children.length) {
-          element = this.elt(type, part.from, part.to, children);
+          element = this.elt(type, part.from, this.text.length, children);
         }
 
         this.parts[i] = element;
@@ -1780,9 +1749,20 @@ export class InlineContext {
 
     // Collect the elements remaining in this.parts into an array.
     let result = []
+    let lastOffset = this.offset;
     for (let i = from; i < this.parts.length; i++) {
       let part = this.parts[i]
-      if (part instanceof Element) result.push(part)
+      if (part instanceof Element) {
+        if (part.from > lastOffset) {
+          console.log('zzz', part.from, lastOffset)
+          result.push(this.elt("Text", lastOffset, part.from))
+        }
+        result.push(part)
+        lastOffset = part.to;
+      }
+    }
+    if (lastOffset < this.text.length) {
+      result.push(this.elt("Text", lastOffset, this.text.length))
     }
 
     // console.log(JSON.stringify(result, null, 2));

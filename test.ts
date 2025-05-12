@@ -68,10 +68,43 @@ interface MarkdownNode {
   leaf?: boolean;
   container?: boolean;
 }
+const printTree = (input: string, tree: Tree) => {
+  let depth = 0;
+  const enter = (node: TreeCursor) => {
+    if (depth === 0) {
+      console.log(node.type.name);
+      return true;
+    }
+    console.log(`${"| ".repeat(depth)}${node.type.name} ${JSON.stringify(input.slice(node.from, node.to))}`);
+    return true;
+  }
+  const leave = (node: TreeCursor) => {
+    // console.log("leave", "|" + " ".repeat(depth * 2), node.type.name)
+  }
+  const cursor = tree.cursor();
+  outer: while (true) {
+    if (enter(cursor) !== false) {
+      if (cursor.firstChild()) {
+        depth++;
+        continue;
+      }
+    }
+    while (true) {
+      if (leave)
+        leave(cursor);
+      if (!depth)
+        break outer;
+      if (cursor.nextSibling())
+        break;
+      cursor.parent();
+      depth--;
+    }
+  }
+}
 
 const toAst = (input: string, tree: Tree, breakpoints: number[]): MarkdownNode => {
   console.log(JSON.stringify(input));
-  console.log(tree.toString());
+  printTree(input, tree);
 
   const doc: MarkdownNode = {
     type: "Document",
@@ -115,56 +148,24 @@ const toAst = (input: string, tree: Tree, breakpoints: number[]): MarkdownNode =
   }
 
 
-  tree.iterate({
-    enter: node => {
-      if (node.type.name === "Document") return;
-      const groups = node.type.prop(NodeProp.group);
-      const isBlock = !!groups?.includes("Block");
-      const isBlockContext = !!groups?.includes("BlockContext");
-      const isLeaf = !!groups?.includes("LeafBlock");
-      const parent = currentBlock()!;
-
-      const n: MarkdownNode = {
-        type: node.type.name,
-        from: node.from,
-        to: node.to,
-        value: input.slice(node.from, node.to),
-        children: []
-      }
-      console.log("enter", node.node);
-
-      const lastOffset = parent.children?.at(-1)?.to || parent.to;
-
-      if (n.from > lastOffset) {
-        insertText(lastOffset, n.from);
-      }
-
-      pushChild(n);
-      blocks.push(n);
 
 
-    },
-    leave: node => {
-      if (node.type.name === "Document") return;
-      blocks.pop();
-    }
-  })
-
-  return doc;
 };
 
 // let doc = "## hi *there*\n\n- Co";
-let doc = "## hi *the\n\n";
+let doc = "- hi *there\n  how are* you?\n\n- *good*";
+// debugger;
 let tree = parser.parse(doc);
 let fragments = TreeFragment.addTree(tree);
 // console.log("Raw tree structure:");
 // console.log(tree.toString());
 
+console.log(JSON.stringify(toAst(doc, tree, parser.breakpoints), null, 2));
 
-doc += "re*";
-tree = parser.parse(doc, fragments);
-fragments = TreeFragment.addTree(tree, fragments);
-console.log(tree.toString());
+// doc += "test\";
+// tree = parser.parse(doc, fragments);
+// fragments = TreeFragment.addTree(tree, fragments);
+// console.log(tree.toString());
 
 // tree.iterate({
 //   enter: n => {
@@ -172,5 +173,5 @@ console.log(tree.toString());
 //   }
 // })
 
-console.log("\nAST structure:");
-console.log(JSON.stringify(toAst(doc, tree, parser.breakpoints), null, 2));
+// console.log("\nAST structure:");
+// console.log(JSON.stringify(toAst(doc, tree, parser.breakpoints), null, 2));
