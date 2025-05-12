@@ -75,7 +75,7 @@ const printTree = (input: string, tree: Tree) => {
       console.log(node.type.name);
       return true;
     }
-    console.log(`${"| ".repeat(depth)}${node.type.name} ${JSON.stringify(input.slice(node.from, node.to))}`);
+    console.log(`${"| ".repeat(depth)}${node.type.name} ${node.type.name === "Text" ? JSON.stringify(input.slice(node.from, node.to)) : ""}`);
     return true;
   }
   const leave = (node: TreeCursor) => {
@@ -120,58 +120,24 @@ const toAst = (input: string, tree: Tree, breakpoints: number[]): MarkdownNode =
     currentBlock().children?.push(child);
   }
 
-  const insertText = (from: number, to: number) => {
-    let last = from;
-    if (from === to) {
-      return;
-    }
-
-    for (const c of breakpoints) {
-      if (c > from && c < to) {
-        pushChild({
-          type: "Text",
-          from: last,
-          to: c,
-          value: input.slice(last, c),
-        })
-        last = c;
-      }
-    }
-    if (last < to) {
-      pushChild({
-        type: "Text",
-        from: last,
-        to: to,
-        value: input.slice(last, to),
-      })
-    }
-  }
-
-
-
-
+  return doc;
 };
 
-// let doc = "## hi *there*\n\n- Co";
-let doc = "- hi *there\n  how are* you?\n\n- *good*";
-// debugger;
-let tree = parser.parse(doc);
-let fragments = TreeFragment.addTree(tree);
-// console.log("Raw tree structure:");
-// console.log(tree.toString());
 
-console.log(JSON.stringify(toAst(doc, tree, parser.breakpoints), null, 2));
+const createParser = (initial: string) => {
+  let doc = initial;
+  let tree = parser.parse(doc);
+  let fragments = TreeFragment.addTree(tree);
+  return {
+    append: (text: string) => {
+      doc += text;
+      tree = parser.parse(doc, fragments);
+      fragments = TreeFragment.addTree(tree, fragments);
+      console.log(JSON.stringify(toAst(doc, tree, parser.breakpoints), null, 2));
+    }
 
-// doc += "test\";
-// tree = parser.parse(doc, fragments);
-// fragments = TreeFragment.addTree(tree, fragments);
-// console.log(tree.toString());
+  }
+}
 
-// tree.iterate({
-//   enter: n => {
-//     console.log(n);
-//   }
-// })
-
-// console.log("\nAST structure:");
-// console.log(JSON.stringify(toAst(doc, tree, parser.breakpoints), null, 2));
+const p = createParser("# cool");
+p.append(" test");

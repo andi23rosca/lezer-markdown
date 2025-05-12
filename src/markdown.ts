@@ -433,7 +433,7 @@ const DefaultBlockParsers: { [name: string]: ((cx: BlockContext, line: Line) => 
     while (after > off && line.text.charCodeAt(after - 1) == line.next) after--
     if (after == endOfSpace || after == off || !space(line.text.charCodeAt(after - 1))) after = line.text.length
 
-    console.log("atx", { ...cx.line });
+    // console.log("atx", { ...cx.line });
     let buf = cx.buffer
       .write(Type.HeaderMark, 0, size)
       .writeElements(cx.parser.parseInline(line.text.slice(off + size + 1, after), from + size + 1), -from)
@@ -1647,6 +1647,27 @@ export class InlineContext {
     return this.append(elt)
   }
 
+
+  getTextForRange(from: number, to: number) {
+    const text: Element[] = [];
+    let last = from;
+    if (from === to) {
+      return text;
+    }
+
+    for (const c of this.parser.breakpoints) {
+      if (c > from && c < to) {
+        text.push(this.elt("Text", last, c))
+        last = c;
+      }
+    }
+    if (last < to) {
+      text.push(this.elt("Text", last, to))
+    }
+
+    return text;
+  }
+
   /// Resolve markers between this.parts.length and from, wrapping matched markers in the
   /// appropriate node and updating the content of this.parts. @internal
   resolveMarkers(from: number) {
@@ -1691,7 +1712,7 @@ export class InlineContext {
       }
 
       if (open.to < close.from) {
-        content.push(this.elt("Text", open.to, close.from))
+        content.push(...this.getTextForRange(open.to, close.from))
       }
 
       if (close.type.mark) content.push(this.elt(close.type.mark, close.from, end))
@@ -1716,7 +1737,6 @@ export class InlineContext {
           type = size == 1 ? "EmphasisPartial" : "StrongEmphasisPartial"
         }
         let element = this.elt(type, part.from, this.text.length)
-        console.log(element)
 
         // Extract all elements after this.parts[i] and put them in element.children
         let children = [];
@@ -1725,7 +1745,7 @@ export class InlineContext {
           let part = this.parts[j];
           if (part instanceof Element) {
             if (part.from > lastOffset) {
-              children.push(this.elt("Text", lastOffset, part.from))
+              children.push(...this.getTextForRange(lastOffset, part.from))
             }
             children.push(part);
             this.parts[j] = null;
@@ -1737,7 +1757,7 @@ export class InlineContext {
           }
         }
         if (lastOffset < this.text.length) {
-          children.push(this.elt("Text", lastOffset, this.text.length))
+          children.push(...this.getTextForRange(lastOffset, this.text.length))
         }
         if (children.length) {
           element = this.elt(type, part.from, this.text.length, children);
@@ -1754,15 +1774,16 @@ export class InlineContext {
       let part = this.parts[i]
       if (part instanceof Element) {
         if (part.from > lastOffset) {
-          console.log('zzz', part.from, lastOffset)
-          result.push(this.elt("Text", lastOffset, part.from))
+          result.push(...this.getTextForRange(lastOffset, part.from))
         }
         result.push(part)
         lastOffset = part.to;
       }
     }
-    if (lastOffset < this.text.length) {
-      result.push(this.elt("Text", lastOffset, this.text.length))
+    if (lastOffset < this.text.length + this.offset) {
+      // console.log(this.text, lastOffset, this.text.length,)
+      // console.log('zzz', this.getTextForRange(lastOffset, this.text.length), this.text.slice(lastOffset, this.text.length))
+      result.push(...this.getTextForRange(lastOffset, this.text.length + this.offset))
     }
 
     // console.log(JSON.stringify(result, null, 2));
