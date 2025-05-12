@@ -1,4 +1,4 @@
-import { NodeProp, type SyntaxNodeRef, type Tree, TreeCursor, TreeFragment } from "@lezer/common";
+import { NodeProp, type SyntaxNodeRef, Tree, TreeCursor, TreeFragment } from "@lezer/common";
 import { parser as baseParser } from "./src/markdown";
 import { GFM } from "./src/extension";
 const parser = baseParser.configure([GFM]);
@@ -10,10 +10,13 @@ interface MarkdownNode {
   to: number;
   children?: MarkdownNode[];
   value?: string;
+  leaf?: boolean;
+  container?: boolean;
 }
 
 const toAst = (input: string, tree: Tree, breakpoints: number[]): MarkdownNode => {
-  const cursor = tree.cursor();
+  console.log(JSON.stringify(input));
+  console.log(tree.toString());
 
   const doc: MarkdownNode = {
     type: "Document",
@@ -31,6 +34,10 @@ const toAst = (input: string, tree: Tree, breakpoints: number[]): MarkdownNode =
 
   const insertText = (from: number, to: number) => {
     let last = from;
+    if (from === to) {
+      return;
+    }
+
     for (const c of breakpoints) {
       if (c > from && c < to) {
         pushChild({
@@ -52,57 +59,57 @@ const toAst = (input: string, tree: Tree, breakpoints: number[]): MarkdownNode =
     }
   }
 
-  const parseInline = (cursor: TreeCursor) => {
-    if (!cursor.firstChild()) {
-      insertText(cursor.from, cursor.to);
-      return;
-    }
 
-    do {
-      console.log(cursor.type.name);
-    } while (cursor.nextSibling());
-  }
+  tree.iterate({
+    enter: node => {
+      if (node.type.name === "Document") return;
+      const groups = node.type.prop(NodeProp.group);
+      const isBlock = !!groups?.includes("Block");
+      const isBlockContext = !!groups?.includes("BlockContext");
+      const isLeaf = !!groups?.includes("LeafBlock");
+      const parent = currentBlock()!;
 
-  while (cursor.next()) {
-    const groups = cursor.type.prop(NodeProp.group);
-    const isBlock = !!groups?.includes("Block");
-    const isLeaf = !!groups?.includes("LeafBlock");
-    const isInline = !isBlock;
-
-    if (isBlock) {
-      const block: MarkdownNode = {
-        type: cursor.type.name,
-        from: cursor.from,
-        to: cursor.to,
-        value: input.slice(cursor.from, cursor.to),
-        children: [],
+      const n: MarkdownNode = {
+        type: node.type.name,
+        from: node.from,
+        to: node.to,
+        value: input.slice(node.from, node.to),
+        children: []
       }
-      pushChild(block);
-      blocks.push(block);
+      console.log("enter", node.node);
 
-      if (isLeaf) {
-        parseInline(cursor);
+      const lastOffset = parent.children?.at(-1)?.to || parent.to;
+
+      if (n.from > lastOffset) {
+        insertText(lastOffset, n.from);
       }
 
+      pushChild(n);
+      blocks.push(n);
+
+
+    },
+    leave: node => {
+      if (node.type.name === "Document") return;
       blocks.pop();
     }
-    // console.log(cursor.type, cursor.type.prop(NodeProp.group));
-  }
+  })
 
   return doc;
 };
 
-let doc = "## hi *there*\n\nCo";
+// let doc = "## hi *there*\n\n- Co";
+let doc = "## hi *the\n\n";
 let tree = parser.parse(doc);
 let fragments = TreeFragment.addTree(tree);
 // console.log("Raw tree structure:");
 // console.log(tree.toString());
 
 
-doc += "ol";
+doc += "re*";
 tree = parser.parse(doc, fragments);
 fragments = TreeFragment.addTree(tree, fragments);
-// console.log(tree.toString());
+console.log(tree.toString());
 
 // tree.iterate({
 //   enter: n => {
