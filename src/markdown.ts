@@ -573,7 +573,7 @@ const DefaultLeafBlocks: { [name: string]: (cx: BlockContext, leaf: LeafBlock) =
   SetextHeading() { return new SetextHeadingParser }
 }
 
-const DefaultEndLeaf: readonly ((cx: BlockContext, line: Line) => boolean)[] = [
+const DefaultEndLeaf: readonly ((cx: BlockContext, line: Line, leaf: LeafBlock) => boolean)[] = [
   (_, line) => isAtxHeading(line) >= 0,
   (_, line) => isFencedCode(line) >= 0,
   (_, line) => isBlockquote(line) >= 0,
@@ -649,6 +649,7 @@ export class BlockContext implements PartialParse {
         this.finishContext()
       }
       if (line.pos < line.text.length) break
+
       // Empty line
       if (!this.nextLine()) return this.finish()
     }
@@ -1604,7 +1605,7 @@ export class InlineContext {
     /// The text of this inline section.
     readonly text: string,
     /// The starting offset of the section in the document.
-    readonly offset: number
+    readonly offset: number,
   ) { }
 
   /// Get the character code at the given (document-relative)
@@ -1649,6 +1650,7 @@ export class InlineContext {
 
 
   getTextForRange(from: number, to: number) {
+    // return [];
     const text: Element[] = [];
     let last = from;
     if (from === to) {
@@ -1729,6 +1731,9 @@ export class InlineContext {
 
     // console.log(this);
     // debugger;
+
+
+
     for (let i = this.parts.length - 1; i >= from; i--) {
       let part = this.parts[i]
       if (part instanceof InlineDelimiter) {
@@ -1742,7 +1747,7 @@ export class InlineContext {
 
         // Extract all elements after this.parts[i] and put them in element.children
         let children = [];
-        let lastOffset = part.from + 1;
+        let lastOffset = part.from;
         for (let j = i; j < this.parts.length; j++) {
           let part = this.parts[j];
           if (part instanceof Element) {
@@ -1774,6 +1779,7 @@ export class InlineContext {
     let lastOffset = from + this.offset;
     for (let i = from; i < this.parts.length; i++) {
       let part = this.parts[i]
+      console.log(part);
       if (part instanceof Element) {
         if (part.from > lastOffset) {
           result.push(...this.getTextForRange(lastOffset, part.from))
@@ -1782,10 +1788,13 @@ export class InlineContext {
         lastOffset = part.to;
       }
     }
+
+    console.log(lastOffset, this.end);
     if (lastOffset < this.end) {
       result.push(...this.getTextForRange(lastOffset, this.end))
     }
 
+    console.log(result);
     return result
   }
 

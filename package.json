@@ -20,8 +20,10 @@
     "hast": "^1.0.0",
     "ist": "^1.1.1",
     "mocha": "^10.2.0",
+    "solid-js": "^1.9.6",
     "ts-node": "^10.9.2",
-    "vite": "^6.3.5"
+    "vite": "^6.3.5",
+    "vite-plugin-solid": "^2.11.6"
   },
   "dependencies": {
     "@lezer/common": "^1.0.0",

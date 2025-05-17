@@ -1,6 +1,8 @@
 {
   "compilerOptions": {
     "lib": ["ESNext"],
+    "jsx": "preserve",
+    "jsxImportSource": "solid-js",
     // "noImplicitReturns": true,
     // "noUnusedLocals": true,
     "strict": true,
